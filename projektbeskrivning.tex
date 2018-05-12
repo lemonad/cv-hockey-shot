@@ -1,0 +1,364 @@
+%%% Template originaly created by Karol Kozioł (mail@karol-koziol.net) and
+%%% modified for ShareLaTeX use
+
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[
+  backend=biber,
+  style=authoryear-ibid, % Motsvarar agsm.
+  uniquename=init,
+  giveninits,  % Ersätt hela förnamn med bara initialerna.
+  maxnames=2,  % Ersätt med et al./m.fl. om det är fler än två förf.
+  natbib=true,
+  hyperref=true,
+  % backref=true,
+  doi=false,
+  isbn=false,
+  url=false
+]{biblatex}
+\addbibresource{exjobb.bib}
+% Lite kortare referenslista utan URL:er och DOI:er.
+
+\usepackage{csquotes} % Must be before babel.
+\usepackage[swedish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{pdfsync}
+\synctex=1
+\usepackage{parskip} % Package to tweak paragraph skipping.
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\usepackage{fancyhdr}
+
+\renewcommand\familydefault{\sfdefault}
+\usepackage{tgheros}
+\usepackage[defaultmono]{droidmono}
+\usepackage[framed,numbered]{matlab-prettifier}
+\makeatletter
+\newcommand\BeraMonottfamily{%
+  \def\fvm@Scale{0.6}% scales the font down
+  \fontfamily{fvm}\selectfont% selects the Bera Mono font
+}
+\makeatother
+
+\usepackage{amsmath,amssymb,amsthm,textcomp}
+\usepackage{enumerate}
+\usepackage{multicol}
+\usepackage{tikz}
+\usepackage{caption,subcaption}
+
+\usepackage{calc}
+\newenvironment{altDescription}[1][\quad]
+  {\begin{list}{}{
+   \renewcommand\makelabel[1]{\hfil\textsf{##1}}
+   \settowidth\labelwidth{\makelabel{#1}}
+   \setlength\leftmargin{\labelwidth+\labelsep}}}
+  {\end{list}}
+\usepackage{titling}
+
+\title{Projektbeskrivning: identifiering av träffögonblick vid
+  skottrampsträning inom ishockey med hjälp av datorseende}
+  \author{Jonas Nockert, nockert@kth.se
+  \\[0.5cm]{\small \textit{Handledare:} Björn Thuresson,
+  \textit{Examinator:} Lars Arvestad}}
+\renewcommand{\maketitlehookb}{\centering Examensarbete inom datalogi,
+grundnivå, VT18}
+\date{Maj 2018}
+
+\begin{document}
+
+\maketitle
+
+\section*{Bakgrund}
+För att bli en bra målskytt inom ishockey uppmuntrar Svenska Ishockeyförbundet
+(\citeyear{Swehockey:2016}) spelare att skjuta minst 100 skott om dagen. Tiden
+på isträningen räcker inte till detta och det är numera vanligt att klubbar
+och spelare på alla nivåer bygger skottramper (se figur~\ref{fig:skottramp})
+och använder dem för daglig träning.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{photos/the-incredible-shooting-ramp-my-mom-built-for-me.png}
+  \caption{Exempel på skottrampsträning utomhus
+  (\href{https://yalewomenshockey.wordpress.com/2013/07/18/ywih-summer-blog-hanna-astrom/}{YALE Womens Hockey's Blog}).
+  \label{fig:skottramp}}
+\end{figure}
+
+Idrottsforskaren Johnny Nilsson har tillsammans med kollegor på Dalarna
+University filmat skottrampsträningar (figur~\ref{fig:leksand}) och manuellt
+analyserat resultatet för att få grundläggande statistiska mått vad gäller
+träffbilder. Denna metod har visat sig mycket tidskrävande, till stor del
+på grund av att hög precision är betydligt svårare att uppnå än vad det först
+verkar, något som kan ses i figur~\ref{fig:skott}.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{photos/skottrampstraning-leksands-if.png}
+  \caption{Bildruta från videoinspelning av skottrampsträning. Duken är
+    en prototyp, anpassad för manuell analys. Kamerans placering bakom
+    spelaren är inte optimal för automatisk analys då spelaren och spelarens
+    klubba ibland skymmer träffpunkten. För automatisk analys är det bättre
+    att placera kameran på sidan framför spelaren, i en vinkel mot målet.
+  \label{fig:leksand}}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}[t]{0.24\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{photos/skott1.png}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}[t]{0.24\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{photos/skott2.png}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}[t]{0.24\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{photos/skott3.png}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}[t]{0.24\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{photos/skott4.png}
+  \end{subfigure}%
+
+  \caption{Även manuellt kan det vara svårt att avgöra exakt var pucken
+    träffar. Det gäller att försöka uppskatta avståndet i centimeter till
+    den målpunkt som spelaren försökt träffa, här nummer 3. Rutnätet,
+    $10 \times 10$~cm är till för okulär kvantifiering av träffdata (utsnitt
+    ur träningsserie, filmad med videokamera i 60 fps).\label{fig:skott}}
+\end{figure}
+
+Nilssons problem gav 2017 upphov till ett MVK-projekt på KTH och en
+prototyp som visade att det bör vara möjligt att automatisera processen med
+precision som närmar sig motsvarande manuell analys om filmer i hög
+upplösning och hög frekvens används som källmaterial.
+
+Ett av grundproblemen vad gäller att med precision avgöra en pucks träffpunkt
+är att position och riktning måste bestämmas i tre dimensioner. Med ett
+tänkt plan parallellt med målburens framsida, längs mållinjen, så är det
+endast när en puck passerar planet (i rätt riktning\footnote{Puckar kan t.ex.
+rulla ut eller träffa andra puckar inne i målburen och få dem att studsa
+ut.}) som dess koordinat ska registreras. Om registrering sker framför eller
+bakom planet så påverkas precisionen negativt.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{photos/3d-problem-two.jpg}
+  \caption{I två dimensioner är det svårt att bestämma var pucken korsar
+    planet längs mållinjen och målburens framsida.
+  \label{fig:3d-problem2}}
+\end{figure}
+
+En vanlig kamera fångar bara två dimensioner och även om det ibland är möjligt
+att återskapa tre dimensioner hos vissa objekt genom deras geometriska
+egenskaper så låter sig detta inte göras med en hockeypuck som rör sig 30~m/s.
+Med andra ord -- även om det skulle forskas fram en perfekt algoritm för att
+följa en hockeypuck i två dimensioner så går det ändå inte att avgöra
+\textit{exakt} när pucken passerar mållinjen\footnote{Givet att inte kameran
+är riktad längs mållinjen men då går det inte längre att avgöra puckens
+koordinat relativt målburens hörn.} (se figur~\ref{fig:3d-problem2}).
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{photos/shooting-tarp.jpg}
+  \caption{Exempel på duk
+  (\href{http://www.hockeyshot.se/HockeyShot-Extreme-Shooting-Tarp-p/target-tarp-032.htm}{hockeyshot.se}).
+  \label{fig:duk}}
+\end{figure}
+
+%% \begin{figure}[ht]
+%%   \centering
+%%   \includegraphics[width=\linewidth]{photos/3d-problem.jpg}
+%%   \caption{Träffpunkten ska enbart registreras första gången pucken
+%%     passerar mållinjen efter ett skott. Studsande och rullande puckar ska
+%%     inte registreras.
+%%   \label{fig:3d-problem}}
+%% \end{figure}
+
+Nilssons lösning är att låta pucken träffa en tålig duk som motsvarar planet
+parallellt med mållinjen. En pragmatisk och kostnadseffektiv metod, väl
+anpassad till att skottrampsträning ofta redan genomförs med hjälp av duk
+(se figur~\ref{fig:skottramp} och~\ref{fig:duk}). Mycket övergripande skulle
+analysen då kunna brytas ned i tre steg:
+
+\begin{enumerate}
+  \item \label{enum:step1} Hitta dukens koordinatsystem givet godtycklig
+    kameravinkel.
+  \item \label{enum:step2} Hitta bildrutan då pucken träffar duken.
+  \item \label{enum:step3} Hitta puckens koordinater i denna bildruta utifrån
+    ovanstående koordinatsystem.
+\end{enumerate}
+
+Alla tre steg har en avgörande påverkan på analysens kvalitet och är
+intressanta problem i sig själva. Det här arbetet kommer fokusera på
+steg~\ref{enum:step2}, vilket verkar kunna formuleras som en variant av
+rörelsedetektion: när duken börjar röra sig har den antagligen träffats av
+en puck. Det finns dock ett antal komplicerande faktorer, t.ex.:
+
+\begin{itemize}
+  \item Allt som rör sig är inte pucken som träffar duken. Om inget annat så
+    rör sig pucken framför duken innan den träffar. Utomhus kan vind få duken
+    att bölja och skuggor från träd och moln kan röra sig över duken. Inomhus
+    kan vibrationer i golvet orsaka skakningsoskärpa (vilket innebär rörelse
+    i hela bilden).
+  \item Om pucken träffar ett hörn rör sig duken väldigt lite jämfört med en
+    träff i mitten. Utan någon form av kalibrering är inte spannet känt och
+    det är inte uppenbart hur det går att avgöra om en rörelse är tillräcklig
+    för att motsvara en träff, speciellt som skottet helt kan ha missat duken.
+  \item Form och storlek på en puck är inte visuellt konsistent under rörelse.
+    I vissa rotationer ser den ut som en cirkel, i andra rotationer som en
+    ellips eller en tunn rektangel. Det är på så sätt svårt att definitivt
+    avgöra om något är en puck eller inte.
+  \item Det kan finnas fler än en puck i bild. Puckar blir framförallt
+    liggande runt målet men de kan också glida eller rulla på marken en tid
+    efter de träffat duken.
+\end{itemize}
+
+På grund av puckens form sker studsen mot duken inte kontrollerat och därför
+är det viktigt att försöka identifiera en bildruta så nära tidpunkten då
+pucken \textit{först} träffar duken. Det behöver dock inte vara en strikt
+sekventiell sökning utan kan en annan, mer karaktäristisk, bildruta
+tillförlitligt hittas så kan denna sedan användas som utgångspunkt för att
+leta bakåt efter bildrutan av intresse.
+
+
+\section*{Syfte}
+Jämförelse (och optimering) av olika algoritmer för identifiering av tidpunkt
+för träff (steg~\ref{enum:step2} ovan) av hockeypuck mot målduk. Kan
+tidsstämplingen göras mer tillförlitlig under verkliga omständigheter bör
+kvaliteten på den automatiska analysen öka avsevärt. Framför allt finns en
+önskan om att minimera antalet identifikationer med stor tidsavvikelse, något
+som kan leda till att träffen placeras långt (meter snarare än centimeter)
+ifrån den faktiska träffpunkten.
+
+Målet är inte en perfekt algoritm utan en algoritm med kända prestanda
+gentemot noggrann manuell analys, samt statistisk referensdata så att
+förbättrade algoritmer kan jämföras med resultaten från den här studien i
+framtiden.
+
+Syftet, i förlängningen, är att möjliggöra forskning inom ishockeyträning
+baserad på stora mängder träningsdata över tid samt bädda för framtida
+produkter för systematisk precisionsträning med hjälp av skottramp.
+
+
+\section*{Metod och teknik}
+Arbetet är av utforskande karaktär och är tänkt att utmynna i en algoritm
+med kvantifierad prestanda. Arbetsmomenten består av datainsamling såväl
+som teoretiska och praktiska undersökningar:
+
+\begin{itemize}
+  \item skapa referensdata genom att spela in filmer från skottrampsträning
+    och noggrant manuellt analysera dem vad gäller tidpunkter för träff,
+  \item hjälpa till att ta fram en duk som underlättar automatisk analys av
+    skottrampsträning,
+  \item med hjälp av Python och OpenCV undersöka bakgrundssubtraktion, den
+    viktigaste klassen av metoder inom rörelsedetektion med fixerad kamera.
+    Genom att lära upp en modell av bakgrunden i bilder kan förgrunden
+    (intressanta förändringar) i nya bildrutor identifieras. Regn, löv som
+    rör sig, ändrade ljusförhållanden och blinkande trafikljus är fenomen som
+    t.ex.\ kan inkorporeras i bakgrundsmodellen. Modellen måste sedan
+    kontinuerligt uppdateras för att hantera gradvis förändring över tid.
+
+    Eftersom problemet är unikt, puckar som rör sig i bild måste t.ex.\
+    ignoreras, är målet med undersökningen att hitta lovande specifika
+    algoritmer som kan valideras praktiskt genom applikation på referensfilmer
+    och jämföras med tidpunkter från manuell analys med hög temporal och
+    spatial upplösning (''gold standard''),
+  \item sätta samman bildbehandlings- och bildanalysmetoder till en algoritm
+    vars tillförlitlighet för identifiering av träfftidpunkt är statistiskt
+    kvantifierad och som kan visualiseras i ett övergripande flödesschema.
+\end{itemize}
+
+
+\section*{Avgränsning}
+Eftersom rörelsedetektion ingår i ett stort och aktivt forskningsfält finns
+ingen möjlighet att praktiskt undersöka det i helhet. Det är inom ramarna
+för detta arbete inte rimligt att hysa någon förhoppning om att skapa en
+perfekt algoritm. Därför bör arbetet kunna begränsas till framförallt metoder
+och algoritmer som redan finns implementerade i OpenCV med bibehållet syfte.
+Alla algoritmer i OpenCV har sitt ursprung i vetenskapliga tidskrifter.
+
+Arbetet utförs med antagandet att steg~\ref{enum:step1} hanteras så nära
+perfekt som möjligt och att steg~\ref{enum:step3} är relativt enkelt givet
+att bildrutan för träff är identifierad. Det antas med andra ord att
+steg~\ref{enum:step3} enbart använder tidpunkt/bildruta som indata från
+steg~\ref{enum:step2} och att puckens position här bara är relevant om det
+hjälper till att bestämma tidpunkt för träff.
+
+
+\pagebreak
+\section*{Planering/tidplan}
+Kursen kommer läsas i halvfart över VT och sommar 18 med start i
+kursen i vetenskaplighet som ingår i uppsatsarbetet. Uppsatsen skrivs på
+engelska.
+
+\subsection*{April}
+\begin{itemize}
+  \item Kurs i vetenskaplighet, 1.5 hp (tentamen 26 april). Klar.
+\end{itemize}
+
+\subsection*{Maj}
+\begin{itemize}
+  \item Övergripande undersöka domänen för rörelsedetektion. Teori, metoder,
+    problem och möjligheter i relation till ovanstående. Samla relevanta
+    källor.
+  \item Undersöka domänen kring skottrampsträning för att i sin tur, i
+    samarbete med Johnny Nilsson, ta fram en målduk och metod för mätning
+    som väger in den algoritmiska komplexiteten på en datorseendelösning.
+  \item Använda mobilkamera för att spela in preliminära filmer för
+    att få testdata samt utvärdera utformningen på målduken.
+    Mobil är den tänkta enheten för framtida träningsprodukter eller
+    forskningsverktyg.
+\end{itemize}
+
+\subsection*{Juni}
+\begin{itemize}
+  \item Skriva på uppsatsens bakgrund
+  \item Skriva syfte och begränsningar.
+  \item Analysera filmer manuellt och etablera en initial referensdatamängd.
+  \item Undersöka angreppsättet från det tidigare MVK-projektet, dels med
+    avseende på analysmetod och dels med avseende på kvalitativt mått för
+    testning som väger in både koordinatförskjutning och tidsförskjutning
+    gentemot referensdata.
+  \item Utgå från grundläggande, generella metoder för rörelsedetektion,
+    tillsammans med Python och OpenCV, för att få en bättre bild av vad som
+    måste hanteras specifikt för domänen.
+  \item Justera duk och mätmetod baserat på resultatet så här långt. Spela
+    in nya filmer med hockeyspelare i Dalarna, etablera kompletterande
+    referensdatamängd. Jämföra med de tidigare resultaten.
+\end{itemize}
+
+\subsection*{Juli}
+\begin{itemize}
+  \item Skriva på metoddel och avhandlingsdel.
+  \item Låna duk av Nilsson för att kunna spela in filmer under naturliga
+    förhållanden med syfte att etablera referensdata vid olika väder, olika
+    tider på dygnet, etc.
+  \item Fortsätta undersöka metoder för rörelsedetektion med hjälp av
+    referensdata (inspelade filmerna från maj, juni, samt filmer från
+    MVK-projekt). Speciellt i avseende på fall som uppkommer under
+    naturliga förhållanden.
+  \item Vid behov spela in nya filmer med hockeyspelare i Dalarna.
+\end{itemize}
+
+\subsection*{Augusti}
+\begin{itemize}
+  \item Vid behov spela in nya filmer med hockeyspelare i Dalarna.
+  \item Sammanställa resultaten i form av en jämförelse med manuellt
+    analyserade filmer, både vad gäller sammantagen avvikelse och vad
+    gäller utliggare och extremfall.
+  \item Skriva metoddel, avhandlingsdel, diskussionsdel och slutsatser.
+\end{itemize}
+
+\subsection*{September}
+\begin{itemize}
+  \item Skriva avslutning och abstract.
+  \item Färdigställa uppsats (med slut i mitten av september).
+\end{itemize}
+
+\printbibliography{}
+\end{document}
