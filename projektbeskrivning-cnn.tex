@@ -47,6 +47,7 @@
 \usepackage{multicol}
 \usepackage{tikz}
 \usepackage{caption,subcaption}
+\captionsetup[figure]{labelfont=bf,textfont=it}
 
 \usepackage{calc}
 \newenvironment{altDescription}[1][\quad]
@@ -94,9 +95,10 @@ och använder dem för daglig träning.
 Idrottsforskaren Johnny Nilsson har tillsammans med kollegor på Dalarna
 University filmat skottrampsträningar (figur~\ref{fig:leksand}) och manuellt
 analyserat resultatet för att få grundläggande statistiska mått vad gäller
-träffbilder. Denna metod har visat sig mycket tidskrävande, till stor del
-på grund av att hög precision är betydligt svårare att uppnå än vad det först
-verkar, något som kan ses i figur~\ref{fig:skott}.
+träffbilder. Denna metod har visat sig mycket tidskrävande, dels för att
+det snabbt blir väldigt många skott att analysera och dels för att det är
+svårare än det först verkar att bestämma träffpunkten med hög precision, något
+som kan ses i figur~\ref{fig:skott}.
 
 \begin{figure}[ht]
   \centering
@@ -143,13 +145,13 @@ prototyp som visade att det bör vara möjligt att automatisera processen med
 precision som närmar sig motsvarande manuell analys om filmer med hög
 upplösning och hög frekvens används som källmaterial.
 
-Ett av grundproblemen vad gäller att med precision avgöra en pucks träffpunkt
-är att position och riktning måste bestämmas i tre dimensioner. Med ett
-tänkt plan parallellt med målburens framsida, längs mållinjen, så är det
-endast när en puck passerar planet (i rätt riktning\footnote{Puckar kan t.ex.
-rulla ut eller träffa andra puckar inne i målburen och få dem att studsa
-ut.}) som dess koordinat ska registreras. Om registrering sker framför eller
-bakom planet så påverkas precisionen negativt.
+Ett av grundstenarna vad gäller att precist avgöra en pucks träffpunkt är
+att position måste bestämmas i tre dimensioner. Med ett tänkt plan parallellt
+med målburens framsida, längs mållinjen, så är det endast när en puck passerar
+planet (i rätt riktning\footnote{Puckar kan t.ex. rulla ut eller träffa andra
+puckar inne i målburen och få dem att studsa ut.}) som dess koordinat ska
+registreras. Om registrering sker framför eller bakom planet så påverkas
+precisionen negativt.
 
 \begin{figure}[ht]
   \centering
@@ -179,30 +181,23 @@ koordinat relativt målburens hörn.} (se figur~\ref{fig:3d-problem2}).
 Nilssons lösning är att låta pucken träffa en tålig duk som motsvarar planet
 parallellt med mållinjen. En pragmatisk och kostnadseffektiv metod, väl
 anpassad till att skottrampsträning ofta redan genomförs med hjälp av duk
-(se figur~\ref{fig:skottramp} och~\ref{fig:duk}). Mycket övergripande skulle
-analysen då kunna brytas ned i tre steg:
-
+(se figur~\ref{fig:skottramp} och~\ref{fig:duk}). Övergripande skulle en
+automatiserad process då kunna brytas ned i tre steg, alla med avgörande
+påverkan på analysens kvalitet:
 \begin{enumerate}
   \item \label{enum:step1} Hitta dukens koordinatsystem givet godtycklig
-    kameravinkel.
+    kameraplacering.
   \item \label{enum:step2} Hitta bildrutan då pucken träffar duken.
   \item \label{enum:step3} Hitta puckens koordinater i denna bildruta utifrån
     ovanstående koordinatsystem.
 \end{enumerate}
 
-Alla tre steg har en avgörande påverkan på analysens kvalitet och är
-intressanta problem i sig själva. Det här arbetet kommer fokusera på
-steg~\ref{enum:step2} och eftersom det visuellt är lätt att se skillnaden
-mellan när pucken bara färdas framför duken och när den verkligen träffar
-(se figur~\ref{fig:skott} och figur~\ref{fig:hit-not-hit}) så verkar det
-rimligt att någon form av datorseende skulle kunna användas för att
-automatisera processen.
 \begin{figure}[ht]
   \centering
   \begin{subfigure}[t]{\textwidth}
     \centering
     \includegraphics[width=\linewidth]{photos/canvas-not-hit.jpg}
-  \end{subfigure}\\
+  \end{subfigure} \\[1cm]
   \begin{subfigure}[t]{\textwidth}
     \centering
     \includegraphics[width=\linewidth]{photos/canvas-hit.jpg}
@@ -211,13 +206,20 @@ automatisera processen.
     träffar (utsnitt ur träningsserie, filmad med mobilkamera i
     120~fps.).\label{fig:hit-not-hit}}
 \end{figure}
+
+Det här arbetet kommer fokusera på steg~\ref{enum:step2}. Eftersom det
+visuellt är relativt lätt att se skillnaden mellan när pucken bara färdas
+framför duken och när den verkligen träffar (se figur~\ref{fig:skott} och
+figur~\ref{fig:hit-not-hit}) så verkar det rimligt att någon form av
+datorseende skulle kunna vara lämpligt att använda.
+
 Det finns dock flera komplicerande faktorer, följande har t.ex.
 observerats på filmer från skottrampsträning:
 \begin{itemize}
   \item Allt som rör sig är inte pucken som träffar duken. Om inget annat så
     rör sig pucken framför duken innan den träffar men det är också troligt
-    att duken inte helt slutat röra sig efter förra träffen (se t.ex. video
-    [\cite{Nockert:2018a}]). Utomhus kan vind få duken att bölja. Inomhus kan
+    att duken inte helt slutat röra sig efter föregående träff (se
+    \cite{Nockert:2018a}). Utomhus kan vind få duken att bölja. Inomhus kan
     vibrationer i golvet orsaka skakningsoskärpa (vilket innebär rörelse i
     hela bilden).
   \item Solljuset varierar över tid och skapar reflektioner i duken. Skuggor
@@ -241,21 +243,20 @@ På grund av puckens form sker studsen mot duken inte kontrollerat och därför
 är det viktigt att försöka identifiera en bildruta så nära tidpunkten då
 pucken först träffar duken.
 
-Baserat på ovanstående verkar initialt problemet kunna modelleras som ett
-(intressant) rörelsedetektionsproblem där solljus, svängningar i duken och
-puckens rörelse innan träff tillhör bakgrundsmodellen och träffbilden tillhör
-förgrund. Rörelsedetektion verkar dessvärre vara ett relativt svårt område
-inom datorseende och det är inte triviala fall som måste hanteras här.
-Framförallt verkar inte syftet vara att tillförlitligt hitta \textit{tidigaste}
-bildrutan där rörelse upptäcks och det är inte uppenbart hur en lösning
-med den här metoden skulle kunna vara till hjälp i letandet bakåt efter
-bildrutan av intresse.
+Initialt verkade problemet kunna modelleras som ett (intressant)
+rörelsedetektionsproblem där solljus, svängningar i duken och puckens flykt
+innan träff tillhör bakgrundsmodellen och träffbilden tillhör förgrund.
+Rörelsedetektion visade sig dessvärre vara ett relativt svårt område inom
+datorseende och det är inte triviala fall som måste hanteras här. Framförallt
+är inte syftet att tillförlitligt hitta \textit{tidigaste} bildrutan där
+rörelse upptäcks och det är inte uppenbart hur en lösning med den här metoden
+skulle kunna vara till hjälp i letandet bakåt efter bildrutan av intresse.
 
 Problemet verkar också kunna modelleras som ett binärt klassificeringsproblem
 där bildrutor antingen visar en duk som ännu inte träffats av pucken eller
-en duk som precis träffats av pucken. Ett faltningsneuronnät skulle
-kunna tränas på dessa två situationer och ge en modell som svarar mot
-sannolikheten att en bild är en träff eller en icke-träff.
+en duk som precis träffats av pucken. Ett faltningsneuronnät kan då tränas på
+dessa två situationer och ge en modell som svarar mot sannolikheten att en
+bild är en träff eller en icke-träff.
 
 Givet att varje skott är tidsmässigt avgränsat från andra skott så är
 hypotesen att bildrutorna i princip skulle kunna behandlas sekvensiellt och
@@ -279,7 +280,7 @@ kvaliteten på den automatiska analysen öka avsevärt. Framför allt finns en
 som kan leda till att träffen placeras långt (meter snarare än centimeter)
 ifrån den faktiska träffpunkten.
 
-Målet är inte en perfekt algoritm utan en algoritm med kända prestanda
+Målet här är inte en perfekt algoritm utan en algoritm med kända prestanda
 gentemot noggrann manuell analys, samt statistisk referensdata så att
 förbättrade algoritmer kan jämföras med resultaten från den här studien i
 framtiden. Syftet, i förlängningen, är att möjliggöra forskning inom
@@ -311,7 +312,7 @@ som teoretiska och praktiska undersökningar:
 Det är inom ramarna för detta arbete inte rimligt att hysa någon förhoppning
 om att skapa en perfekt algoritm. Därför kommer i första hand högnivåmetoder
 som redan finns implementerade i Keras och OpenCV användas snarare än att
-bygga eget på låg nivå.
+utveckla specialanpassade metoder på låg nivå.
 
 Arbetet utförs med antagandet att steg~\ref{enum:step1} hanteras så nära
 perfekt som möjligt och att steg~\ref{enum:step3} är relativt enkelt givet
