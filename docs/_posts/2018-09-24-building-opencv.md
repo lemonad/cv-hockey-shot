@@ -45,7 +45,7 @@ cd ../opencv
 ```
 
 I have previously setup a virtualenv with `pyenv` for Python 3.7.0 and pip
-installed Numpy
+installed `numpy`, `imutils` and `pyyaml`
 
 ```
 pyenv activate opencv
