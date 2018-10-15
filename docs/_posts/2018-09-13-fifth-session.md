@@ -7,7 +7,7 @@ date:    2018-09-13 20:57:10 +0200
        alt="">
   <figcaption>
     Manually compiled results from a good round, hinting towards me getting
-    better. Personal illustration by author. September 2018.
+    better. Personal illustration by author, October 2018 (updated).
   </figcaption>
 </figure>
 

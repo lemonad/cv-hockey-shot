@@ -37,8 +37,8 @@ air.
   </figcaption>
 </figure>
 
-225 recorded shots. Some wind and overcast, although the sun breaks through
-sometimes.
+225 recorded shots. Some wind and overcast, although the sun broke through
+once in a while.
 
 <figure>
   <img src="{{ site.url }}{{ site.baseurl }}/assets/images/second-session-example-round.png"
