@@ -15,5 +15,7 @@ have to keep track of which is the current target when analyzing the videos.
   <figcaption>
     The recording setup. An iPhone 6S plus for shots and an iPhone 7 Plus
     for recording the player (me). Personal photo by author. September 2018.
+    <em>Update 2018-10-01:</em> I'm now using the iPhone 6S Plus to record
+    myself and an iPhone X to record the shots.
   </figcaption>
 </figure>

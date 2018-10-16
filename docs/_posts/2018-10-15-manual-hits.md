@@ -14,13 +14,11 @@ painfully obvious after having manually positioned all these shots — becoming
 good takes a long, *long* time!
 
 <figure>
-  <img src="{{ site.url }}{{ site.baseurl }}/assets/images/fifth-session-good-round.png"
-       alt="">
+  <img src="{{ site.url }}{{ site.baseurl }}/assets/images/quantification-ui.jpg" alt="">
   <figcaption>
-    Manually compiled results from a good round, hinting towards me getting
-    better. Except last session, with three targets, I have only been aiming
-    at the middle target (number 2). Personal illustration by author,
-    October 2018.
+    Interface for a tool I have built to help with the manual process. It is
+    primarily keyboard controlled for efficiency and not all parts have
+    a corresponding graphical representation. October 2018.
   </figcaption>
 </figure>
 
@@ -53,6 +51,17 @@ For each shot, I record the following information:
    I just use a repeating sequence like 1, 2, 3, 1, 2, 3 rather than a random
    sequence. This is not optimal for actual training but makes little
    difference here, at this stage.
+
+<figure>
+  <img src="{{ site.url }}{{ site.baseurl }}/assets/images/fifth-session-good-round.png"
+       alt="">
+  <figcaption>
+    Manually compiled results from a good round, hinting towards me getting
+    better. Except last session, with three targets, I have only been aiming
+    at the middle target (number 2). Personal illustration by author,
+    October 2018.
+  </figcaption>
+</figure>
 
 Over time, while analyzing the videos and seeing all the different edge cases,
 I have realized that some of the recorded information is captured for multiple
