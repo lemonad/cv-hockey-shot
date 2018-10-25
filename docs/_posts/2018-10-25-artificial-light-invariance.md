@@ -42,15 +42,15 @@ iPhones only offer multiple of 30 hz (since 60 hz is the power grid frequency
 in the US, one can assume). So recording in the slo-mo mode and 120 hz causes
 very noticeable pulsing as can be seen in the video below.
 
-
-
 <figure>
   <iframe width="560" height="315"
           src="https://www.youtube.com/embed/_Z4O7aqLHNA" frameborder="0"
           allow="autoplay; encrypted-media" allowfullscreen></iframe>
   <figcaption>
-    Strobe/rolling effect with artificial light in slow motion. Recorded with
-    iPhone X in slo-mo 120 fps. October 2018.
+    Strobe/rolling effect with artificial light in slow motion. Also note
+    the amount of vertical canvas movement due to long distance between
+    suspension points. Recorded with iPhone X in slo-mo 120 fps. October
+    2018.
 </figcaption>
 </figure>
 
