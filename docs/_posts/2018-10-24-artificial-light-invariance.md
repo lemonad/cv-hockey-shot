@@ -42,9 +42,11 @@ iPhones only offer multiple of 30 hz (since 60 hz is the power grid frequency
 in the US, one can assume). So recording in the slo-mo mode and 120 hz causes
 very noticeable pulsing as can be seen in the video below.
 
+
+
 <figure>
   <iframe width="560" height="315"
-          src="https://youtu.be/_Z4O7aqLHNA" frameborder="0"
+          src="https://www.youtube.com/embed/_Z4O7aqLHNA" frameborder="0"
           allow="autoplay; encrypted-media" allowfullscreen></iframe>
   <figcaption>
     Strobe/rolling effect with artificial light in slow motion. Recorded with
@@ -57,7 +59,7 @@ have improved the situation but also caused canvas glare (see video below).
 
 <figure>
   <iframe width="560" height="315"
-          src="https://youtu.be/7sySwrTLRUM" frameborder="0"
+          src="https://www.youtube.com/embed/7sySwrTLRUM" frameborder="0"
           allow="autoplay; encrypted-media" allowfullscreen></iframe>
   <figcaption>
     Using a side mounted runner's headlamp together with overhead artificial
