@@ -3,7 +3,7 @@ title:   "Eleventh session: almost snow"
 date:    2018-10-28 22:03:10 +0200
 ---
 <figure>
-  <img src="{{ site.url }}{{ site.baseurl }}/assets/images/tenth-session-cold.jpg"
+  <img src="{{ site.url }}{{ site.baseurl }}/assets/images/eleventh-session-cold.jpg"
        alt="">
   <figcaption>
     Still frame from video (using 2x on iPhone X) by author, October 2018.
