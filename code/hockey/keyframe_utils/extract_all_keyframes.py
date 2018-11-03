@@ -6,7 +6,7 @@ import yaml
 
 from ..common.Datafiles import get_all_paths, get_paths, get_session_names
 from ..common.AppData import AppSettings, TestData, VideoData
-from extract_keyframes import ExtractKeyframes
+from .extract_keyframes import ExtractKeyframes
 
 session_names = get_session_names()
 for session_name in session_names:

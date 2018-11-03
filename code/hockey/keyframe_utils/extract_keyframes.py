@@ -23,7 +23,7 @@ from ..common.KeyFrame import KeyFrame
 
 class ExtractKeyframes:
     FRAMES_TO_SAMPLE = [-10, -5, -1, 0, 1, 2]
-    NUMBER_OF_KALMAN_FILTER_FRAMES_BEFORE_HIT = abs(min(FRAMES_TO_SAMPLE)) + 6
+    NUMBER_OF_KALMAN_FILTER_FRAMES_BEFORE_HIT = abs(min(FRAMES_TO_SAMPLE)) + 20
     NUMBER_OF_FRAMES_AFTER_HIT = max(FRAMES_TO_SAMPLE)
 
     GREEN_COLOR = (0, 255, 0)
@@ -31,7 +31,6 @@ class ExtractKeyframes:
     BLUE_COLOR = (255, 0, 0)
     LIGHT_BLUE_COLOR = (255, 140, 140)
 
-    stencil_filename = "canvas-stencil-adj-top-1cm.png"
     MIN_MATCH_COUNT = 10
 
     def __init__(self, path, silent=False):
@@ -44,12 +43,17 @@ class ExtractKeyframes:
 
         self.silent = silent
         head, tail = os.path.split(path)
+        head, session = os.path.split(head)
         base, ext = tail.split(".")
         if head:
             head += "/"
+
+        self.session_name = session
         self.image_name = base
-        self.data_path = head + base + "." + "yaml"
-        self.video_path = head + base + "." + ext
+        self.data_path = head + session + "/" + base + "." + "yaml"
+        self.video_path = head + session + "/" + base + "." + ext
+        stencil_filename = "canvas-stencil-adj-top-1cm.png"
+        self.stencil_path = "hockey/common/{:s}".format(stencil_filename)
 
     def save_filename(self, folder, keyframe_type, frame_no, found_hit):
         if keyframe_type == KeyFrame.AMBIGUOUS_EXAMPLE:
@@ -126,7 +130,7 @@ class ExtractKeyframes:
         # print("Width {:d} x Height {:d}".format(video_width, video_height))
         # print("")
 
-        self.canvas_detector = CanvasDetector(1 / video_fps)
+        self.canvas_detector = CanvasDetector(self.stencil_path, 1 / video_fps)
 
         if not self.silent:
             cv2.startWindowThread()
@@ -206,7 +210,9 @@ class ExtractKeyframes:
             ):
                 current_shot_number += 1
                 found_hit = False
-                self.canvas_detector.reset()
+                # Don't reset the detector for each shot as the canvas position
+                # should be fairly stable over time.
+                # self.canvas_detector.reset()
 
                 while True:
                     hf = self.testdata.get_hit_frame_for_shot(current_shot_number)
@@ -236,7 +242,7 @@ class ExtractKeyframes:
 
             # Find canvas.
             goal_corners = self.canvas_detector.find_goal_corners(fullframe)
-            if goal_corners.size != 8:
+            if goal_corners is None or goal_corners.size != 8:
                 print(
                     "Could not find goal corners in frame {:d}!".format(
                         self.current_frame_number
@@ -259,9 +265,10 @@ class ExtractKeyframes:
             if self.testdata.is_hit_frame(self.current_frame_number):
                 found_hit = True
 
-            self.save_keyframe(
-                fullframe, goal_corners, self.current_frame_number, found_hit
-            )
+            if not skip_frame:
+                self.save_keyframe(
+                    fullframe, goal_corners, self.current_frame_number, found_hit
+                )
 
             if self.silent:
                 continue

@@ -2,6 +2,8 @@
 Detect canvas goal corners using SIFT and FLANN matching.
 Optional Kalman filter stabilization.
 
+TODO: When homography is skipped, next correct step should not use 1 * timestep.
+
 """
 import cv2
 import numpy as np
@@ -11,7 +13,6 @@ from .KalmanPoint import KalmanPoint
 
 
 class CanvasDetector:
-    stencil_filename = "hockey/common/canvas-stencil-adj-top-1cm.png"
     MIN_MATCH_COUNT = 10
 
     CANVAS_WIDTH = 2499
@@ -26,29 +27,33 @@ class CanvasDetector:
     CANVAS_EXTEND_LEFT = 225
     CANVAS_EXTEND_RIGHT = 225
 
-    def __init__(self, timestep=None):
+    def __init__(self, stencil_path, timestep=None):
+        self.stencil_path = stencil_path
         # Setup Kalman filters.
         if timestep:
             self.use_kalman_filters = True
+            pn = 0.1
+            pndt = 0.1
+            mn = 10
             self.ul_corner_kalman_filter = KalmanPoint(
                 timestep,
-                process_noise_cov=np.array([0.1, 0.1, 0.1, 0.1], "float32"),
-                measurement_noise_cov=np.array([10, 10], "float32"),
+                process_noise_cov=np.array([pn, pn, pndt, pndt], "float32"),
+                measurement_noise_cov=np.array([mn, mn], "float32"),
             )
             self.ur_corner_kalman_filter = KalmanPoint(
                 timestep,
-                process_noise_cov=np.array([0.1, 0.1, 0.1, 0.1], "float32"),
-                measurement_noise_cov=np.array([10, 10], "float32"),
+                process_noise_cov=np.array([pn, pn, pndt, pndt], "float32"),
+                measurement_noise_cov=np.array([mn, mn], "float32"),
             )
             self.lr_corner_kalman_filter = KalmanPoint(
                 timestep,
-                process_noise_cov=np.array([0.1, 0.1, 0.1, 0.1], "float32"),
-                measurement_noise_cov=np.array([10, 10], "float32"),
+                process_noise_cov=np.array([pn, pn, pndt, pndt], "float32"),
+                measurement_noise_cov=np.array([mn, mn], "float32"),
             )
             self.ll_corner_kalman_filter = KalmanPoint(
                 timestep,
-                process_noise_cov=np.array([0.1, 0.1, 0.1, 0.1], "float32"),
-                measurement_noise_cov=np.array([10, 10], "float32"),
+                process_noise_cov=np.array([pn, pn, pndt, pndt], "float32"),
+                measurement_noise_cov=np.array([mn, mn], "float32"),
             )
         else:
             self.use_kalman_filters = False
@@ -63,7 +68,7 @@ class CanvasDetector:
         )
 
         # Stencil
-        stencil_image = cv2.imread(self.stencil_filename)
+        stencil_image = cv2.imread(self.stencil_path)
         stencil_gray = cv2.cvtColor(stencil_image, cv2.COLOR_RGB2GRAY)
         self.stencil_shape = stencil_gray.shape
         # Use a different SIFT detector for the stencil since they
@@ -75,9 +80,8 @@ class CanvasDetector:
             edgeThreshold=10,
             sigma=1.6,
         )
-        self.stencil_keypoints, self.stencil_descriptors = sift_stencil.detectAndCompute(
-            stencil_gray, None
-        )
+        self.stencil_keypoints, self.stencil_descriptors = \
+                sift_stencil.detectAndCompute(stencil_gray, None)
 
     def find_goal_corners(self, fullframe):
         gray_fullframe = cv2.cvtColor(fullframe, cv2.COLOR_RGB2GRAY)
@@ -115,6 +119,7 @@ class CanvasDetector:
         #     if m.distance < (2.0 * n.distance):
         #         good.append(m)
 
+        corners = None
         if len(good) > self.MIN_MATCH_COUNT:
             src_pts = np.float32(
                 [self.stencil_keypoints[m.trainIdx].pt for m in good]
@@ -125,7 +130,10 @@ class CanvasDetector:
                 src_pts, dst_pts, cv2.RANSAC, 3.0, None, maxIters=2000, confidence=0.995
             )
             # matchesMask = mask.ravel().tolist()
-            corners = self.get_goal_corners_from_homography(M)
+            if np.linalg.det(M[0:2, 0:2]) > 0:
+                corners = self.get_goal_corners_from_homography(M)
+
+        if corners is not None:
             if not self.use_kalman_filters:
                 return np.int32(corners)
 
@@ -144,8 +152,8 @@ class CanvasDetector:
             return np.int32(corners_pred)
         elif self.use_kalman_filters:
             print(
-                "Not enough matches are found - %d/%d - using Kalman filter."
-                % (len(good), self.MIN_MATCH_COUNT)
+                "Not enough matches are found - %d/%d but okay since using "
+                "Kalman filter." % (len(good), self.MIN_MATCH_COUNT)
             )
             # Use corner coordinates from Kalman filters.
             kf_ul = self.ul_corner_kalman_filter.predict()
