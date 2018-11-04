@@ -41,8 +41,9 @@ only the part of the canvas representing the goal, with very little background
 visible.
 
 The problem, like so often in computer vision, is that this does not work
-perfectly every time. For a few intermittent frames out of thousands, the
-homography suddenly jumped to something like the below.
+perfectly every time. A small fraction of the frames (out of thousands) has
+intermittent homographies suddenly jumping to something like the below (and
+then back again).
 
 <figure>
   <img src="{{ site.url }}{{ site.baseurl }}/assets/images/bad-homography.jpg"
@@ -70,13 +71,13 @@ capture any example. I also reset the kalman filter after having processed
 each shot since the canvas could potentially be repositioned by the player
 in between each shot.
 
-This fixed almost all problems but, of course, one of the initial frames was
-bad, which can be seen below. This causes the initial position to be off
-and even though the Kalman filter slowly adjusts itself to a good representation
-of the canvas corners, this takes much more time than the six frames I had
-alloted. Why not let it run 60 frames? Because calculating the homography
-based on SIFT and brute force matching is a choice of precision rather than
-processing time.
+At first, this appeared to be a working fix but then I noticed that the
+initial frame was bad for a round (see below). This caused the starting
+points to be off and even though the Kalman filter slowly adjusted itself
+to a good representation of the canvas corners, it took much more time
+than the six frames I had alloted. Why not let it run 60 frames? Because
+calculating the homography based on SIFT and brute force matching is a
+choice of precision rather than processing time.
 
 <figure>
   <img src="{{ site.url }}{{ site.baseurl }}/assets/images/bad-initial-homography.png"
@@ -91,7 +92,8 @@ At this point, I adjusted my assumptions and instead of letting every shot
 being independently analyzed and use the same Kalman filter over the whole
 round of shots. Doubling the number of prior frames used should be enough
 to adjust to reasonable changes in positions of tripod and canvas *between
-shots*.
+shots*. As long as the first homography in a whole session is okay, the
+rest should be too.
 
 One might imagine that using more prior shots would be better, right? Not
 entirely. One of the prior frames resulted in the below homography, from which
@@ -113,7 +115,21 @@ homography is. That is, for example, look into the range of plane normals
 that can be expected given a mobile camera on a tripod, the canvas level
 and hanging some distance off the ground.
 
-For now, the above, worst-case, homography can be handled by checking that the
-rotational part of the homography matrix has a positive determinant, which
-essentially means that the transformation will preserve the order of the
-corners.
+For now, some of the bad cases, like the one above, can be handled by checking
+that the corners resulting from the transformation are ordered properly
+(the left corners having smaller x-coordinates than the right corners, etc.)
+Also the ratio of side lengths should be within some margin. This does not
+completely fix the problem but results in far fewer erroneous goal corners.
+
+*Edit*: I also managed to improve things by adjusting the SIFT parameters
+for the stencil based on it being an illustration. This is also something
+I need to look into more as it is not obvious what an optimal set of
+parameters look like for this application. Also, at this moment I can only
+visually inspect the images -- and there are thousands.
+
+*Edit 2*: The processing time for all session excepth the eleventh took 13
+hours and 12 minutes. The result was 3441 examples of the puck just having
+hit the canvas and 3519 examples of the canvas not yet having been hit. Based
+on visual inspection, very few examples are based on a non-optimal homography
+and none of the examples are invalid. The total, just shy of 7000 examples,
+should be enough data for now.

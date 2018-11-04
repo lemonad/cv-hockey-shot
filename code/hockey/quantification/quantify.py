@@ -33,6 +33,7 @@ import numpy as np
 import yaml
 
 from ..common.AppData import (AppSettings, TestData, VideoData)
+from ..common.CanvasDetector import CanvasDetector
 from ..common.Dimension import Dimension
 from ..common.KeyFrame import KeyFrame
 from ..common.Point import Point
@@ -505,8 +506,10 @@ class Quantify:
 
             # Find canvas.
             if self.draw_homography:
-                goal_pts = self.find_canvas(fullframe)
-                if goal_pts.size == 8:
+                goal_pts = self.canvas_detector.find_goal_corners(
+                        fullframe, optional_frame_number=self.current_frame_number)
+                # goal_pts = self.find_canvas(fullframe)
+                if goal_pts is not None and goal_pts.size == 8:
                     self.current_goal_corners = goal_pts
                     cv2.polylines(frame, [goal_pts], True, (255, 0, 0),
                                   thickness=1, lineType=cv2.LINE_AA)
@@ -677,6 +680,8 @@ class Quantify:
                 return False
             self.videodata.set_rotation90(rotation90)
         print("done")
+
+        self.canvas_detector = CanvasDetector(self.stencil_filename)
 
         # Setup output window.
         cv2.namedWindow("image", cv2.WINDOW_NORMAL |

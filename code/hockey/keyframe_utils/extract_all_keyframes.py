@@ -17,8 +17,8 @@ for session_name in session_names:
         os.remove(imfile)
 
     print("Extracting training frames from session {:s}...".format(session_name))
-    for p in get_paths("MOV", session_name, training=True, testing=False):
-        # print("Reading videodata from {0}".format(p))
+    for p in get_paths("MOV", session_name, training=True, testing=True):
+        print("Reading videodata from {0}".format(p))
 
         ex = ExtractKeyframes(p, silent=True)
         if not ex.setup():

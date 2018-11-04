@@ -137,7 +137,6 @@ class ExtractKeyframes:
 
         read_frame = True
         fullframe = None
-        # current_shot_number = 7
         current_shot_number = 1
         found_hit = False
 
@@ -241,7 +240,8 @@ class ExtractKeyframes:
                 continue
 
             # Find canvas.
-            goal_corners = self.canvas_detector.find_goal_corners(fullframe)
+            goal_corners = self.canvas_detector.find_goal_corners(
+                    fullframe, optional_frame_number=self.current_frame_number)
             if goal_corners is None or goal_corners.size != 8:
                 print(
                     "Could not find goal corners in frame {:d}!".format(
@@ -259,6 +259,7 @@ class ExtractKeyframes:
                     break
             if skip_frame:
                 # print("Skipping {:d}.".format(self.current_frame_number))
+                # pass
                 continue
             # print("Processing {:d}.".format(self.current_frame_number))
 
@@ -433,7 +434,8 @@ class ExtractKeyframes:
             # PNG is always lossless so compression 0-9 is just
             # a trade-off between speed and file size. 1 is fast.
             params = (cv2.IMWRITE_PNG_COMPRESSION, 1)
-            cv2.imwrite(savename, outframe, params)
+            if not cv2.imwrite(savename, outframe, params):
+                print("Frame {:d}: PNG image not saved!".format(frame_number))
 
     def setup(self):
         """Setup settings, videodata and testdata."""

@@ -76,14 +76,14 @@ class CanvasDetector:
         sift_stencil = cv2.xfeatures2d.SIFT_create(
             nfeatures=0,
             nOctaveLayers=3,
-            contrastThreshold=0.04,
+            contrastThreshold=0.34,
             edgeThreshold=10,
-            sigma=1.6,
+            sigma=2.0,
         )
         self.stencil_keypoints, self.stencil_descriptors = \
                 sift_stencil.detectAndCompute(stencil_gray, None)
 
-    def find_goal_corners(self, fullframe):
+    def find_goal_corners(self, fullframe, optional_frame_number=0):
         gray_fullframe = cv2.cvtColor(fullframe, cv2.COLOR_RGB2GRAY)
 
         # find the image keypoints and descriptors with SIFT
@@ -129,9 +129,43 @@ class CanvasDetector:
             M, mask = cv2.findHomography(
                 src_pts, dst_pts, cv2.RANSAC, 3.0, None, maxIters=2000, confidence=0.995
             )
+
             # matchesMask = mask.ravel().tolist()
-            if np.linalg.det(M[0:2, 0:2]) > 0:
-                corners = self.get_goal_corners_from_homography(M)
+            # det = np.linalg.det(M[0:2, 0:2])
+            # print("{0} Det: {1} ({2})".format(optional_frame_number, det, det <= 0))
+            # N1 = np.sqrt(M[0, 0] ** 2 + M[1, 0] **2)
+            # print("{0} N1: {1} ({2})".format(optional_frame_number, N1, N1 > 4 or N1 < 0.1))
+            # N2 = np.sqrt(M[0, 1] ** 2 + M[1, 1] **2)
+            # print("{0} N2: {1} ({2})".format(optional_frame_number, N2, N2 > 4 or N2 < 0.2))
+            # N3 = np.sqrt(M[2, 0] ** 2 + M[2, 1] **2)
+            # print("{0} N3: {1} ({2})".format(optional_frame_number, N3, N3 > 0.002))
+            # if np.linalg.det(M[0:2, 0:2]) > 0.0:
+            corners = self.get_goal_corners_from_homography(M)
+
+            # Compare side lengths of upper and lower sides.
+            ratio_width = (np.linalg.norm(corners[0] - corners[3]) /
+                           np.linalg.norm(corners[1] - corners[2]))
+            # Compare side lengths of left and right sides.
+            ratio_height = (np.linalg.norm(corners[0] - corners[1]) /
+                            np.linalg.norm(corners[2] - corners[3]))
+
+            if not self.verify_corner_order(corners):
+                corners = None
+                print("Frame {:d}: corner order".format(
+                    optional_frame_number))
+                # return np.int32(corners)
+            elif ratio_height > 1.5 or ratio_height < 0.67:
+                corners = None
+                print("Frame {:d}: height ratio: {:f}".format(
+                    optional_frame_number, ratio_height))
+                # return np.int32(corners)
+            elif ratio_width > 1.05 or ratio_width < 0.95:
+                corners = None
+                print("Frame {:d}: width ratio: {:f}".format(
+                    optional_frame_number, ratio_width))
+                # return np.int32(corners)
+
+            # TODO Check area (cv2.contourArea) and compare with whole frame.
 
         if corners is not None:
             if not self.use_kalman_filters:
@@ -152,8 +186,9 @@ class CanvasDetector:
             return np.int32(corners_pred)
         elif self.use_kalman_filters:
             print(
-                "Not enough matches are found - %d/%d but okay since using "
-                "Kalman filter." % (len(good), self.MIN_MATCH_COUNT)
+                "Frame {:d}: Not enough matches are found - {:d}/{:d} "
+                "but okay since using Kalman filter.".format(
+                    optional_frame_number, len(good), self.MIN_MATCH_COUNT)
             )
             # Use corner coordinates from Kalman filters.
             kf_ul = self.ul_corner_kalman_filter.predict()
@@ -163,10 +198,33 @@ class CanvasDetector:
             return np.int32(np.array([kf_ul, kf_ll, kf_lr, kf_ur]))
         else:
             print(
-                "Not enough matches are found - %d/%d"
-                % (len(good), self.MIN_MATCH_COUNT)
+                "Frame {:d}: Not enough matches are found - {:d}/{:d}".format(
+                    optional_frame_number, len(good), self.MIN_MATCH_COUNT)
             )
             return None
+
+    def verify_corner_order(self, corners):
+        """Return false if corners are not ordered counter clockwise
+
+        Starting with the upper left corner, the corners should be
+        ordered as follows:
+
+            ul <------- ur
+            |            ^
+            |            |
+            v            |
+            ll -------> lr
+
+        """
+        # ul.x < ur.x, ul.x < lr.x
+        n1 = corners[0][0] < corners[2][0] and corners[0][0] < corners[3][0]
+        # ll.x < ur.x, ll.x < lr.x
+        n2 = corners[1][0] < corners[2][0] and corners[1][0] < corners[3][0]
+        # ul.y < ll.y, ul.y < lr.y
+        n3 = corners[0][1] < corners[1][1] and corners[0][1] < corners[2][1]
+        # ur.y < ll.y, ur.y < lr.y
+        n4 = corners[3][1] < corners[1][1] and corners[3][1] < corners[2][1]
+        return (n1 and n2 and n3 and n4)
 
     def get_goal_corners_from_homography(self, M):
         h, w = self.stencil_shape
