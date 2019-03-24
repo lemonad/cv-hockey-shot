@@ -513,6 +513,59 @@ class Quantify:
                     self.current_goal_corners = goal_pts
                     cv2.polylines(frame, [goal_pts], True, (255, 0, 0),
                                   thickness=1, lineType=cv2.LINE_AA)
+                    # midx = goal_pts[0][0] + (goal_pts[3][0] - goal_pts[0][0]) // 2
+                    # midy = goal_pts[0][1] + (goal_pts[1][1] - goal_pts[0][1]) // 2
+                    # print(midx, midy)
+                    # cv2.floodFill(frame,
+                    #               None,
+                    #               (midx,midy),
+                    #               (255, 255, 255),
+                    #               loDiff=(94,94,94),
+                    #               upDiff=(255,255,255),
+                    #               flags=8 | cv2.FLOODFILL_FIXED_RANGE)
+                    (grey, ul) = self.extract_keyframe(fullframe, goal_pts)
+                    if grey is not None:
+                        grey = cv2.equalizeHist(grey)
+                        cv2.imshow('hello', grey)
+                        # Setup SimpleBlobDetector parameters.
+                        params = cv2.SimpleBlobDetector_Params()
+
+                        # Change thresholds
+                        params.minThreshold = 0
+                        params.maxThreshold = 50
+
+                        # Filter by Area.
+                        params.filterByArea = True
+                        params.minArea = 150
+                        params.maxArea = 300
+
+                        # Find dark blobs.
+                        params.filterByColor = True
+                        params.blobColor = 0
+
+                        # Filter by Circularity
+                        params.filterByCircularity = False
+                        # params.minCircularity = 0.1
+
+                        # Filter by Convexity
+                        params.filterByConvexity = True
+                        params.minConvexity = 0.5
+
+                        # Filter by Inertia
+                        params.filterByInertia = False
+                        # params.minInertiaRatio = 0.01
+
+                        # Create a detector with the parameters
+                        detector = cv2.SimpleBlobDetector_create(params)
+                        keypoints = detector.detect(grey) # + np.array((100,100))
+                        for kp in keypoints:
+                            kp.pt = (kp.pt[0] + ul[0], kp.pt[1] + ul[1])
+                        frame = cv2.drawKeypoints(
+                                frame,
+                                keypoints,
+                                np.array([]),
+                                (0,0,255),
+                                cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
                 else:
                     self.current_goal_corners = None
 
@@ -734,6 +787,38 @@ class Quantify:
                          KeyFrame.NOT_KEYFRAME,
                          cv2.QT_PUSH_BUTTON, False)
         return True
+
+    def extract_keyframe(self, frame, goal_corners):
+        # Expand goal corners a little fade out region.
+        goal_exp = np.array(
+            [
+                [goal_corners[0][0] - 5, goal_corners[0][1] - 5],
+                [goal_corners[1][0] - 5, goal_corners[1][1] + 5],
+                [goal_corners[2][0] + 5, goal_corners[2][1] + 5],
+                [goal_corners[3][0] + 5, goal_corners[3][1] - 5],
+            ],
+            dtype=np.int32,
+        )
+
+        (rows, cols, n) = frame.shape
+        maskframe = np.zeros((rows, cols, n), np.uint8)
+        maskframe[:] = (255, 255, 255)
+        maskframe = cv2.fillPoly(maskframe, [goal_exp], (0, 0, 0))
+        # maskframe = cv2.GaussianBlur(maskframe, (21, 21), 10)
+        maskframe = cv2.blur(maskframe, (11, 11))
+        outframe = cv2.add(frame, maskframe)
+
+        xmin = min(goal_exp[0][0], goal_exp[1][0])
+        xmax = max(goal_exp[2][0], goal_exp[3][0])
+        ymin = min(goal_exp[0][1], goal_exp[3][1])
+        ymax = max(goal_exp[1][1], goal_exp[2][1])
+        outframe = outframe[ymin:ymax, xmin:xmax]
+
+        # b, g, r = cv2.split(outframe)
+        if outframe.size == 0:
+            return None
+
+        return (cv2.cvtColor(outframe, cv2.COLOR_RGB2GRAY), (xmin, ymin))
 
     def save(self):
         if self.dirty_flag:
