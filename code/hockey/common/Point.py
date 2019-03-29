@@ -10,6 +10,11 @@ class Point:
         self._x = x_0
         self._y = y_0
 
+    @classmethod
+    def fromlist(cls, coords):
+        assert len(coords) == 2
+        return cls(coords[0], coords[1])
+
     def __repr__(self):
         return "Point(%s, %s)" % (self._x, self._y)
 

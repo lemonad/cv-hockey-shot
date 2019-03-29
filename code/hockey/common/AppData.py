@@ -7,6 +7,7 @@ import yaml
 from .Dimension import Dimension
 from .KeyFrame import KeyFrame
 from .Point import Point
+from .Rect import Rect
 
 
 class AppSettings:
@@ -358,12 +359,15 @@ class TestData:
     # n: {'coord': Point(x, y), 'miss': False, 'bounce': False}
     _hits = {}
     _keyframes = {}
+    _extracted = {}
 
     def __init__(self, data={}):
         if "hits" in data:
             self._hits = data["hits"]
         if "keyframes" in data:
             self._keyframes = data["keyframes"]
+        if "extracted" in data:
+            self._extracted = data["extracted"]
 
     def get_keyframe_type(self, frame_number):
         """get keyframe type of a frame."""
@@ -486,6 +490,26 @@ class TestData:
 
         return (prev_hit_frame, current_hit_frame, next_hit_frame)
 
+    def get_extracted_data(self, frame_number):
+        """Get data on extracted frame."""
+        if frame_number in self._extracted:
+            return self._extracted[frame_number]
+        else:
+            return None
+
+    def set_extracted_data(self, frame_number, frame_rect, goal_corners):
+        """Add/update data on extracted frame."""
+        self._extracted[frame_number] = {
+                "frame": frame_rect,
+                "goal_corners": goal_corners,
+                }
+
     def save(self):
-        data = {"test_data": {"hits": self._hits, "keyframes": self._keyframes}}
+        data = {
+                "test_data": {
+                    "hits": self._hits,
+                    "keyframes": self._keyframes,
+                    "extracted": self._extracted
+                    }
+                }
         return yaml.dump(data)

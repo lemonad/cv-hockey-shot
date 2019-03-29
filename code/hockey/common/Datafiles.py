@@ -1,6 +1,13 @@
 """
 General information for all sessions.
 
+Note that "testing" is setting aside full movies from each session
+in order to make sure that no individual frames has previously been
+seen during training. This way, testing can be done on sequential
+and unbroken streams of video to see if the detection works in
+practice -- or on frames similar to training to get a comparative
+measurement.
+
 """
 _basedir = "/Users/lemonad/Pictures/Hockey/Shots/"
 _files = {

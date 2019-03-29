@@ -1,14 +1,12 @@
 import os, shutil
 
-from keras import layers
-from keras import models
-from keras import optimizers
+from keras import layers, metrics, models, optimizers
 from keras.preprocessing.image import ImageDataGenerator
 
-PIXELS = 200
+PIXELS = 224
 
 # Directories for the training, validation, and test splits
-base_dir = "split_dataset"
+base_dir = "split-dataset-croponly"
 train_dir = os.path.join(base_dir, "train")
 validation_dir = os.path.join(base_dir, "validate")
 test_dir = os.path.join(base_dir, "test")
@@ -31,13 +29,13 @@ model.summary()
 
 model.compile(
     loss="binary_crossentropy",
-    optimizer=optimizers.RMSprop(lr=5e-4),
-    metrics=["accuracy"],
+    # optimizer=optimizers.RMSprop(lr=1e-3),
+    optimizer=optimizers.Adam(),
+    metrics=[metrics.mae, metrics.binary_accuracy],
 )
 
-# Rescales all images by 1/255
 train_datagen = ImageDataGenerator(
-    rescale=1.0 / 255,
+    rescale=1./255,
     # rotation_range=40,
     # width_shift_range=0.2,
     # height_shift_range=0.2,
@@ -45,11 +43,11 @@ train_datagen = ImageDataGenerator(
     # zoom_range=0.2,
     horizontal_flip=True,
 )
-validation_datagen = ImageDataGenerator(rescale=1.0 / 255)
+validation_datagen = ImageDataGenerator(rescale=1./255)
 
 train_generator = train_datagen.flow_from_directory(
     train_dir,
-    target_size=(PIXELS, PIXELS),  # Resizes all images to 150 × 150
+    target_size=(PIXELS, PIXELS),
     color_mode="grayscale",
     # batch_size=20,
     # Because you use binary_crossentropy loss,
@@ -57,6 +55,7 @@ train_generator = train_datagen.flow_from_directory(
     # save_to_dir='augmented_images',
     interpolation="lanczos",
     class_mode="binary",
+    seed=26,
 )
 validation_generator = validation_datagen.flow_from_directory(
     validation_dir,
@@ -65,6 +64,7 @@ validation_generator = validation_datagen.flow_from_directory(
     # batch_size=20,
     interpolation="lanczos",
     class_mode="binary",
+    seed=26,
 )
 
 for data_batch, labels_batch in train_generator:
@@ -78,8 +78,9 @@ history = model.fit_generator(
     epochs=30,
     validation_data=validation_generator,
     validation_steps=50,
+    use_multiprocessing=True,
 )
-model.save("hockey.h5")
+model.save("hockey-adam.h5")
 
 import matplotlib.pyplot as plt
 

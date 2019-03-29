@@ -17,6 +17,8 @@ import numpy as np
 import yaml
 
 from ..common.AppData import AppSettings, TestData, VideoData
+from ..common.Point import Point
+from ..common.Rect import Rect
 from ..common.CanvasDetector import CanvasDetector
 from ..common.KeyFrame import KeyFrame
 
@@ -70,6 +72,26 @@ class ExtractKeyframes:
             self.image_name,
             frame_no,
         )
+
+    def find_next_hit_frame(self, current_shot_number, cap):
+        current_hit_frame = None
+        while True:
+            hf = self.testdata.get_hit_frame_for_shot(current_shot_number)
+            if not hf:
+                return None
+            if not self.testdata.is_miss_frame(
+                hf
+            ) and not self.testdata.is_bounce_frame(hf):
+                current_hit_frame = hf
+                break
+            current_shot_number += 1
+
+        # Next shot
+        cap.set(
+            cv2.CAP_PROP_POS_FRAMES,
+            current_hit_frame - self.NUMBER_OF_KALMAN_FILTER_FRAMES_BEFORE_HIT - 1,
+        )
+        return current_hit_frame, current_shot_number
 
     def quantify(self):
         """Main quantifier for videos."""
@@ -140,24 +162,13 @@ class ExtractKeyframes:
         current_shot_number = 1
         found_hit = False
 
-        while True:
-            hf = self.testdata.get_hit_frame_for_shot(current_shot_number)
-            if not hf:
-                if not self.silent:
-                    cv2.destroyWindow("image")
-                cap.release()
-                return
-            if not self.testdata.is_miss_frame(
-                hf
-            ) and not self.testdata.is_bounce_frame(hf):
-                current_hit_frame = hf
-                break
-            current_shot_number += 1
-
-        cap.set(
-            cv2.CAP_PROP_POS_FRAMES,
-            current_hit_frame - self.NUMBER_OF_KALMAN_FILTER_FRAMES_BEFORE_HIT - 1,
-        )
+        ret = self.find_next_hit_frame(current_shot_number, cap)
+        if not ret:
+            if not self.silent:
+               cv2.destroyWindow("image")
+            cap.release()
+            return
+        current_hit_frame, current_shot_number = ret
         read_frame = True
 
         while True:
@@ -213,35 +224,17 @@ class ExtractKeyframes:
                 # should be fairly stable over time.
                 # self.canvas_detector.reset()
 
-                while True:
-                    hf = self.testdata.get_hit_frame_for_shot(current_shot_number)
-                    if not hf:
-                        if not self.silent:
-                            cv2.destroyWindow("image")
-                        cap.release()
-                        return
-                    if not self.testdata.is_miss_frame(
-                        hf
-                    ) and not self.testdata.is_bounce_frame(hf):
-                        current_hit_frame = hf
-                        break
-                    current_shot_number += 1
-
-                # Next shot
-                cap.set(
-                    cv2.CAP_PROP_POS_FRAMES,
-                    current_hit_frame
-                    - self.NUMBER_OF_KALMAN_FILTER_FRAMES_BEFORE_HIT
-                    - 1,
-                )
-                # cap.set(cv2.CAP_PROP_POS_FRAMES,
-                #         current_hit_frame - NUMBER_OF_FRAMES_BEFORE_HIT - 1)
+                ret = self.find_next_hit_frame(current_shot_number, cap)
+                if not ret:
+                    break
+                current_hit_frame, current_shot_number = ret
                 read_frame = True
                 continue
 
             # Find canvas.
             goal_corners = self.canvas_detector.find_goal_corners(
-                    fullframe, optional_frame_number=self.current_frame_number)
+                fullframe, optional_frame_number=self.current_frame_number
+            )
             if goal_corners is None or goal_corners.size != 8:
                 print(
                     "Could not find goal corners in frame {:d}!".format(
@@ -281,8 +274,18 @@ class ExtractKeyframes:
             # Show processed image in window.
             cv2.imshow("image", frame)
 
-        cv2.destroyWindow("image")
+        if not self.silent:
+            cv2.destroyWindow("image")
         cap.release()
+
+        # Save metadata on extracted regions to yaml file.
+        if not self.silent:
+            print("Saving changes to data file '%s'." % self.data_path)
+        with open(self.data_path, "w") as outfile:
+            outfile.write(self.settings.save())
+            outfile.write(self.videodata.save())
+            outfile.write(self.testdata.save())
+
         return True
 
     def annotate_frame(self, fullframe, goal_corners, frame_number):
@@ -397,6 +400,14 @@ class ExtractKeyframes:
         return frame
 
     def save_keyframe(self, frame, goal_corners, frame_number, found_hit):
+        kf_type = self.testdata.get_keyframe_type(frame_number)
+
+        xmin = np.min(goal_corners[:, 0])
+        xmax = np.max(goal_corners[:, 0])
+        ymin = np.min(goal_corners[:, 1])
+        ymax = np.max(goal_corners[:, 1])
+        subframe = frame[ymin:ymax, xmin:xmax]
+
         # Expand goal corners a little fade out region.
         goal_exp = np.array(
             [
@@ -415,19 +426,35 @@ class ExtractKeyframes:
         # maskframe = cv2.GaussianBlur(maskframe, (21, 21), 10)
         maskframe = cv2.blur(maskframe, (11, 11))
         outframe = cv2.add(frame, maskframe)
-
-        xmin = min(goal_exp[0][0], goal_exp[1][0])
-        xmax = max(goal_exp[2][0], goal_exp[3][0])
-        ymin = min(goal_exp[0][1], goal_exp[3][1])
-        ymax = max(goal_exp[1][1], goal_exp[2][1])
         outframe = outframe[ymin:ymax, xmin:xmax]
+
+        self.testdata.set_extracted_data(
+            frame_number,
+            Rect(xmin, xmax, ymin, ymax),
+            [
+                Point.fromlist(goal_corners[0]),  # Upper left.
+                Point.fromlist(goal_corners[1]),  # Lower left.
+                Point.fromlist(goal_corners[2]),  # Lower right.
+                Point.fromlist(goal_corners[3]),  # Upper right.
+            ],
+        )
 
         # b, g, r = cv2.split(outframe)
         # gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         # edges = cv2.Canny(r, 10, 20)
         # cv2.imshow('out', edges)
 
-        kf_type = self.testdata.get_keyframe_type(frame_number)
+        savename = self.save_filename(
+            "dataset-croponly", kf_type, frame_number, found_hit
+        )
+        if savename:
+            # cv2.IMWRITE_JPEG_QUALITY, 80,
+            # PNG is always lossless so compression 0-9 is just
+            # a trade-off between speed and file size. 1 is fast.
+            params = (cv2.IMWRITE_PNG_COMPRESSION, 1)
+            if not cv2.imwrite(savename, subframe, params):
+                print("Frame {:d}: PNG image not saved!".format(frame_number))
+
         savename = self.save_filename("dataset", kf_type, frame_number, found_hit)
         if savename:
             # cv2.IMWRITE_JPEG_QUALITY, 80,
