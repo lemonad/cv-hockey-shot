@@ -82,11 +82,31 @@ for session_name in session_names:
             counter += 1
             if (counter % 10) == 0:
                 validation_writer.writerow(
-                    [name, x, y, norm_x, norm_y, rect.xmin, rect.ymin]
+                    [
+                        name,
+                        x,
+                        y,
+                        norm_x,
+                        norm_y,
+                        rect.xmin,
+                        rect.ymin,
+                        rect.xmax,
+                        rect.ymax,
+                    ]
                 )
             else:
                 train_writer.writerow(
-                    [name, x, y, norm_x, norm_y, rect.xmin, rect.ymin]
+                    [
+                        name,
+                        x,
+                        y,
+                        norm_x,
+                        norm_y,
+                        rect.xmin,
+                        rect.ymin,
+                        rect.xmax,
+                        rect.ymax,
+                    ]
                 )
 
 train_csvfile.close()

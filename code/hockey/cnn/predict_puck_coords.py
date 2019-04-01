@@ -1,27 +1,30 @@
 import os
 
+from keras.models import load_model
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 import pandas as pd
 from PIL import Image, ImageDraw
 
-from .train_puck_coords import PuckCoordsModel
+from .train_puck_coords2 import PuckCoordsModel
 
 
 image_size = 224
 validation_image_dir = "./dataset-croponly/hit"
 alpha = 1
 
-model = PuckCoordsModel(image_size, alpha)()
-model.compile(optimizer=Adam(), loss=["mse"], metrics=["mae"])
-weight_path = "{}_weights.best.hdf5".format("puck_coords")
-model.load_weights(weight_path)
+model = load_model("train-puck6.h5")
+# model = PuckCoordsModel(image_size, alpha)()
+# model.compile(optimizer=Adam(), loss=["mse"], metrics=["accuracy", "mae"])
+# weight_path = "{}_weights.best.hdf5".format("puck_coords")
+# model.load_weights(weight_path)
 
 validation_label_df = pd.read_csv(
     "puck_validation.csv",
     delimiter=" ",
     header=None,
-    names=["filename", "x", "y", "norm_x", "norm_y", "frame_x", "frame_y"],
+    names=["filename", "x", "y", "norm_x", "norm_y", "frame_xmin", "frame_ymin",
+    "frame_xmax", "frame_ymax"],
 )
 
 datagen = ImageDataGenerator(rescale=1.0 / 255)
@@ -29,7 +32,7 @@ validation_generator = datagen.flow_from_dataframe(
     dataframe=validation_label_df,
     directory=validation_image_dir,
     x_col="filename",
-    y_col=["x", "y", "norm_x", "norm_y"],
+    y_col=["norm_x", "norm_y", "frame_xmin", "frame_ymin", "frame_xmax", "frame_ymax"],
     target_size=(image_size, image_size),
     class_mode="other",
     color_mode="grayscale",
@@ -49,12 +52,19 @@ for i in range(validation_generator.n):
     path = validation_generator.filepaths[i]
     filename = os.path.basename(path)
     im = Image.open(path)
-    val_x, val_y, val_norm_x, val_norm_y = validation_generator[i][1][0]
-    x, y = coords[i]
+    t = validation_generator[i][1][0]
+    (val_norm_x, val_norm_y, frame_xmin, frame_ymin, frame_xmax, frame_ymax) = t
+    norm_x, norm_y = coords[i]
     draw = ImageDraw.Draw(im)
-    sz = 5
-    draw.line([(val_x - sz, val_y - sz), (val_x + sz, val_y + sz)], fill=(0, 255, 0))
-    draw.line([(val_x - sz, val_y + sz), (val_x + sz, val_y - sz)], fill=(0, 255, 0))
+    width = frame_xmax - frame_xmin
+    height = frame_ymax - frame_ymin
+    sz = int(width * 0.01
+    val_x = val_norm_x * width
+    val_y = val_norm_y * height
+    x = norm_x * width
+    y = norm_y * height
+    draw.line([(val_x - sz, val_y), (val_x + sz, val_y)], fill=(0, 255, 0))
+    draw.line([(val_x, val_y + sz), (val_x, val_y - sz)], fill=(0, 255, 0))
 
     draw.line([(x - sz, y - sz), (x + sz, y + sz)], fill=(255, 0, 0))
     draw.line([(x - sz, y + sz), (x + sz, y - sz)], fill=(255, 0, 0))
