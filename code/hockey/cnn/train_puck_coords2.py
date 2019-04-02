@@ -1,3 +1,5 @@
+from math import ceil
+
 from keras import backend as K
 from keras.applications.mobilenet import MobileNet
 from keras.callbacks import (
@@ -32,7 +34,7 @@ import pandas as pd
 
 
 class PuckCoordsModel:
-    def __init__(self, image_size, batch_norm=True):
+    def __init__(self, image_size, batch_norm):
         self._input_shape = (image_size, image_size, 1)
         self.batch_norm = batch_norm
 
@@ -51,22 +53,22 @@ class PuckCoordsModel:
         if self.batch_norm:
             x = BatchNormalization()(x)
         x = Activation("relu")(x)
-        x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="same")(x)
+        x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")(x)
         x = Conv2D(36, (5, 5))(x)
         if self.batch_norm:
             x = BatchNormalization()(x)
         x = Activation("relu")(x)
-        x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="same")(x)
+        x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")(x)
         x = Conv2D(48, (5, 5))(x)
         if self.batch_norm:
             x = BatchNormalization()(x)
         x = Activation("relu")(x)
-        x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="same")(x)
+        x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")(x)
         x = Conv2D(64, (3, 3))(x)
         if self.batch_norm:
             x = BatchNormalization()(x)
         x = Activation("relu")(x)
-        x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="same")(x)
+        x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding="valid")(x)
         x = Conv2D(64, (3, 3))(x)
         if self.batch_norm:
             x = BatchNormalization()(x)
@@ -81,6 +83,7 @@ class PuckCoordsModel:
 
 
 def train():
+    batch_size = 32
     image_size = 224
     train_image_dir = "./dataset-croponly/hit"
     validation_image_dir = "./dataset-croponly/hit"
@@ -89,13 +92,15 @@ def train():
         "puck_training.csv",
         delimiter=" ",
         header=None,
-        names=["filename", "x", "y", "norm_x", "norm_y", "frame_x", "frame_y"],
+        names=["filename", "x", "y", "norm_x", "norm_y", "frame_xmin", "frame_ymin",
+            "frame_xmax", "frame_ymax"],
     )
     validation_label_df = pd.read_csv(
         "puck_validation.csv",
         delimiter=" ",
         header=None,
-        names=["filename", "x", "y", "norm_x", "norm_y", "frame_x", "frame_y"],
+        names=["filename", "x", "y", "norm_x", "norm_y", "frame_xmin", "frame_ymin",
+            "frame_xmax", "frame_ymax"],
     )
 
     datagen = ImageDataGenerator(rescale=1.0 / 255)
@@ -108,6 +113,7 @@ def train():
         class_mode="other",
         color_mode="grayscale",
         interpolation="lanczos",
+        batch_size=batch_size,
         seed=42,
     )
 
@@ -120,33 +126,37 @@ def train():
         class_mode="other",
         color_mode="grayscale",
         interpolation="lanczos",
+        batch_size=batch_size,
         seed=42,
     )
 
     model = PuckCoordsModel(image_size, batch_norm=True)()
-    model.compile(optimizer=Adam(), loss=["mse"], metrics=["mse", "mae"])
+    model.compile(optimizer=Adam(lr=1e-3), loss=["mse"], metrics=["mse", "mae"])
     # model.compile(optimizer="rmsprop", loss="mse", metrics=["mae"])
     model.count_params()
     model.summary()
 
-    weight_path = "{}_weights.best.hdf5".format("puck_coords")
+    # weight_path = "{}_weights.best.hdf5".format("puck_coords")
+    model_path = "{}.best.h5".format("puck_coords")
     checkpoint = ModelCheckpoint(
-        weight_path,
+        # weight_path,
+        # save_weights_only=True,
+        model_path,
+        save_weights_only=False,
         monitor="val_loss",
         verbose=1,
         save_best_only=True,
         mode="min",
-        save_weights_only=True,
     )
 
     reduceLROnPlat = ReduceLROnPlateau(
         monitor="val_loss",
-        factor=0.8,
+        factor=0.1,
         patience=10,
         verbose=1,
         mode="auto",
         cooldown=5,
-        min_lr=0.0001,
+        min_lr=1e-6,
     )
     # probably needs to be more patient, but kaggle time is limited
     # early = EarlyStopping(monitor="val_loss", mode="min", patience=10)
@@ -155,12 +165,13 @@ def train():
     # save_name = "mobilenet_reg_%s_%d" % (alpha, image_size)
     # model.compile(optimizer=Adam(), loss=["mae"], metrics={'pred_a': 'mae'})
 
+    print(ceil(train_generator.n / batch_size))
     history = model.fit_generator(
         train_generator,
-        steps_per_epoch=100,
-        epochs=50,
+        steps_per_epoch=2, #ceil(train_generator.n / batch_size),
+        epochs=2,
         validation_data=validation_generator,
-        validation_steps=50,
+        validation_steps=ceil(validation_generator.n / batch_size),
         callbacks=callbacks_list,
     )
 
@@ -172,20 +183,23 @@ def train():
 
     import matplotlib.pyplot as plt
 
-    # acc = history.history["acc"]
-    # val_acc = history.history["val_acc"]
+    mae = history.history["mean_absolute_error"]
+    val_mae = history.history["val_mean_absolute_error"]
     loss = history.history["loss"]
     val_loss = history.history["val_loss"]
 
+    print("Best MSE: {:f} (trn), {:f} (val)".format(np.min(loss), np.min(val_loss)))
+    print("Best MAE: {:f} (trn), {:f} (val)".format(np.min(mae), np.min(val_mae)))
+
     epochs = range(1, len(loss) + 1)
-    # plt.plot(epochs, acc, "bo", label="Training MAE")
-    # plt.plot(epochs, val_acc, "b", label="Validation MAE")
-    # plt.title("Training and validation MAE")
-    # plt.legend()
+    plt.plot(epochs, mae, "b--", label="Training")
+    plt.plot(epochs, val_mae, "b", label="Validation")
+    plt.title("Training and validation MAE")
+    plt.legend()
     plt.figure()
-    plt.plot(epochs, loss, "bo", label="Training loss")
-    plt.plot(epochs, val_loss, "b", label="Validation loss")
-    plt.title("Training and validation loss")
+    plt.plot(epochs, loss, "r--", label="Training")
+    plt.plot(epochs, val_loss, "r", label="Validation")
+    plt.title("Training and validation loss (MSE)")
     plt.legend()
     plt.show()
 

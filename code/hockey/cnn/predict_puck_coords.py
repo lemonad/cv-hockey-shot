@@ -13,7 +13,7 @@ image_size = 224
 validation_image_dir = "./dataset-croponly/hit"
 alpha = 1
 
-model = load_model("train-puck6.h5")
+model = load_model("train-puck7.h5")
 # model = PuckCoordsModel(image_size, alpha)()
 # model.compile(optimizer=Adam(), loss=["mse"], metrics=["accuracy", "mae"])
 # weight_path = "{}_weights.best.hdf5".format("puck_coords")
@@ -58,7 +58,7 @@ for i in range(validation_generator.n):
     draw = ImageDraw.Draw(im)
     width = frame_xmax - frame_xmin
     height = frame_ymax - frame_ymin
-    sz = int(width * 0.01
+    sz = int(width * 0.01)
     val_x = val_norm_x * width
     val_y = val_norm_y * height
     x = norm_x * width
